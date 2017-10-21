@@ -1,0 +1,91 @@
+% layout 'default';
+% title 'Search for people';
+%= include 'navbars/mail'
+<!-- <%= __FILE__ %> -->
+<style>
+
+
+.person {
+    margin: 6px; background-color: red; height: 48px; text-align: center; vertical-align: middle; line-height: 48px;
+    font-size: 16pt; border-radius: 5px;
+    background-color: maroon; color: white;  
+}
+
+#add {
+    margin: 6px; background-color: red; height: 48px; text-align: center; vertical-align: middle; line-height: 48px;
+    font-size: 16pt; border-radius: 5px;
+    background-color: Navy; color: white;  
+}
+</style>
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/jquery.touchswipe/1.6.18/jquery.touchSwipe.min.js'
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.js'
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/hammer-time/1.1.0/hammer-time.min.js'
+%= javascript 'https://cdn.rawgit.com/hammerjs/jquery.hammer.js/90c2f3bb/jquery.hammer.js'
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/TypeWatch/3.0.0/jquery.typewatch.min.js'
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-10 col-md-offset-1">
+	<div class="form-group form-group-lg">
+	  <input type="text" class="form-control" id="search" placeholder="type a name">
+	</div>
+	<div id="results">
+	  
+	</div>
+    </div>
+  </div>
+</div>
+<script>
+    var lastValue = '';
+    $(function(){
+	var templates = {};
+        $(("[type='text/x-handlebars-template']" )).each(function(){
+            var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
+            templates[id] = Handlebars.compile($(this).html());
+	});
+	$("#search").typeWatch( {
+	    callback: function (value) {
+		console.log('TypeWatch callback: (' + (this.type || this.nodeName) + ') ' + value);
+		$.get('/e/v1/person/', { q: value }, function(d){
+		    console.log(d);
+		    $('#results').html(templates.results(d))
+      		    $('#results').children()
+			.hammer()
+			.on("swiperight", function(e) {
+			    e.stopPropagation();
+			    window.location.href = 'tel:' + $(e.target).data('mobile')
+			})
+			.on("swipeleft",  function(e) {
+			    e.stopPropagation();
+			    var email = $(e.target).data('email');
+			    $.post('/m/v1/people/' + email + '/delete', function(d){
+				console.log(d);
+				$(e.target).parent().hide()
+			    })
+			})
+			.on("click",  function(e) {
+			    e.stopPropagation();
+			    window.location.href = '/m/v1/meet/' + $(e.target).data('email')
+			})
+			.on("press",    function(e) {
+			    e.stopPropagation();
+			    var email = $(e.target).data('email');
+			    $.post('/m/v1/people/' + email + '/add', function(d){
+				console.log(d);
+				window.location.href = '/m/v1/people/'
+			    })
+			})
+		})
+	    },
+	    wait: 750,
+	    highlight: true,
+	    allowSubmit: false,
+	    captureLength: 4
+	} );
+
+    })
+</script>
+<script id="results-template" type="text/x-handlebars-template">
+  {{#each results}}
+  <div data-mobile="{{ mobile }}" data-city="{{ city }}" data-email="{{ email }}" class="person">{{ name }} {{ surname }}</div>
+  {{/each}}
+</script>

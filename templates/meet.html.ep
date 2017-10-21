@@ -1,0 +1,117 @@
+% layout 'default';
+% title 'Book a meeting';
+%= include 'navbars/mail'
+<!-- <%= __FILE__ %> -->
+<style>
+  a h2 { color: black; }
+
+  a, a:hover { color: white; }
+  .slot, #mail {
+    margin: 6px; background-color: maroon; color: white; height: 36px; text-align: center; vertical-align: middle; line-height: 36px; font-size: 12pt;
+    border-radius: 5px;font-size: 12pt;
+  }
+  #mail {
+    background-color: Navy; color: white;  
+  }
+</style>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-10 col-md-offset-1">
+      <div id="email" data-email="<%= $email %>">
+	<a href="<%= url_for('/meet') %>/<%= $email %>"><%= $email %></a>
+      </div>
+      <div id="data">
+      </div>
+      <div id="slots">
+      </div>
+      % if ($email eq session('email')) {
+      <div id="mail">mail schedule</div>
+      % }
+    </div>
+  </div>
+</div>
+<script>
+    $(function(){
+    	var templates = {};
+	var email = "<%= $email %>";
+        $(("[type='text/x-handlebars-template']" )).each(function(){
+            var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
+            templates[id] = Handlebars.compile($(this).html());
+        });
+
+	$.ajax({
+	    // get the person's freebusy
+	    url: '/e/v1/person/' + $('#email').data('email'),
+	    type: 'GET',
+	    dataType: "json",
+	}).then(function(d){
+	    $('#email a').html('<h2>' + d.name + '</h2>');
+	    $('#data').html(templates.data(d));
+
+	    localStorage.setItem('me/data', JSON.stringify(d));
+	    
+	    // get the person's lat lon
+	    return $.ajax({
+		url: '/g/v1/latlon/?q=' + d.city,
+		type: 'GET',
+		dataType: "json",
+	    })
+	}).then(function(d){
+	    // get the person's timezone
+	    return $.ajax({
+		url: '/g/v1/timezone/?location=' + [d.lat, d.lng].join(','),
+		type: 'GET',
+		dataType: "json",
+	    })
+	}).then(function(d){
+	    $('#tz').html(d.timeZoneId)
+	})
+	
+	$.get('/e/v1/busy/<%= $email %>', function(d){
+	    d.slots = _.chain(d.slots).map(function(e, i){
+		var s = { start: {}, end: {} }
+		s.start.time = e[0];
+		s.end.time   = e[1];
+		s.start.format = moment(e[0] + 'Z').tz('Europe/Berlin').format('ddd Do MMM H:mm');
+		s.end.format   = moment(e[1] + 'Z').tz('Europe/Berlin').format('H:mm');
+		return s;
+	    }).value()
+	    localStorage.setItem('freebusy/' + email, JSON.stringify(d));
+	    $('#slots').html(templates.slots(d))
+	})
+	$('#mail').click(function(e){
+	    var d = JSON.parse(localStorage.getItem('freebusy/' + email));
+	    var m = JSON.parse(localStorage.getItem('me/data'));
+	    console.log(d);
+	    console.log(m);
+	    window.location.href = 'mailto:?subject=Free%20slots&body=' + encodeURIComponent(templates.mail(d) + m.name)
+	});
+    })
+</script>
+<script id="slots-template" type="text/x-handlebars-template">
+{{#each slots}}    
+<div class="slot">
+  <a href="<%= url_for('/setup/') %><%= $email %>/{{ start.time }}/{{ end.time }}">
+    <span class="time">{{ start.format }}</span>-<span class="time">{{ end.format }}</span>
+  </a>
+</div>
+{{/each}}    
+</script>
+<script id="data-template" type="text/x-handlebars-template">
+  <span id="city">{{ city }}</span> |
+  <span id="country">{{ country }}</span> |
+  <span id="tz"></span>
+</script>
+<script id="mail-template" type="text/x-handlebars-template">Hi!
+
+these are my free slots in the next weeks  
+
+{{#each slots}}    
+- {{ start.format }}-{{ end.format }}
+{{/each}}    
+
+I hope one works for you too.
+
+Regards,
+
+</script>

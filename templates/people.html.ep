@@ -1,0 +1,102 @@
+% layout 'default';
+% title 'People';
+%= include 'navbars/mail'
+<!-- <%= __FILE__ %> -->
+<style>
+
+
+.person {
+    margin: 6px; background-color: red; height: 48px; text-align: center; vertical-align: middle; line-height: 48px;
+    font-size: 16pt; border-radius: 5px;
+    background-color: maroon; color: white;  
+}
+
+#add {
+    margin: 6px; background-color: red; height: 48px; text-align: center; vertical-align: middle; line-height: 48px;
+    font-size: 16pt; border-radius: 5px; background-color: Navy; color: white;  
+}
+</style>
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/jquery.touchswipe/1.6.18/jquery.touchSwipe.min.js'
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.js'
+%= javascript 'https://cdnjs.cloudflare.com/ajax/libs/hammer-time/1.1.0/hammer-time.min.js'
+%= javascript 'https://cdn.rawgit.com/hammerjs/jquery.hammer.js/90c2f3bb/jquery.hammer.js'
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-10 col-md-offset-1">
+      % for my $person (@$people) {
+      <div data-email="<%= $person %>" class="person">
+	<%= $person %>
+      </div>
+      % }
+      <div id="add">
+	<a href="/m/v1/search">add a person</a>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+    $(function(){
+	var templates = {};
+        $(("[type='text/x-handlebars-template']" )).each(function(){
+            var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
+            templates[id] = Handlebars.compile($(this).html());
+	});
+	if ("geolocation" in navigator) {
+	    navigator.geolocation.getCurrentPosition(function(position) {
+		var location = [ position.coords.latitude, position.coords.longitude ].join(',');
+		$.get("/g/v1/timezone", { location: location }, function(d){
+		    console.log(d);
+		} )
+	    });
+	} else {
+		/* geolocation IS NOT available */
+	}
+	
+	$('.person').each(function(i, e){
+	    var email = $(e).html();
+
+	    var d = JSON.parse(localStorage.getItem('details/' + email));
+	    if (d) { $(e).html(templates.person(d)) };
+	    
+	    $.get('/e/v1/busy/' + email, function(d){
+		localStorage.setItem('freebusy/' + email, JSON.stringify(d));
+	    });
+	    
+	    $.get('/e/v1/person/' + email, function(d){
+		localStorage.setItem('details/' + email, JSON.stringify(d));
+		$(e).html(templates.person(d))
+      		$(e).children().first()
+		    .hammer()
+		    .on("swipeleft",  function(e) {
+			e.stopPropagation();
+			var email = $(e.target).data('email');
+			$.post('/m/v1/people/' + email + '/delete', function(d){
+			    console.log(d);
+			    $(e.target).parent().hide()
+			})
+		    })
+		    .on("swiperight", function(e) {
+			e.stopPropagation();
+			window.location.href = 'tel:' + $(e.target).data('mobile')
+		    })
+		    .on("click",  function(e) {
+			e.stopPropagation();
+			window.location.href = '/m/v1/meet/' + $(e.target).data('email')
+		    })
+		    .on("press",    function(e) {
+			e.stopPropagation();
+			alert("Meet " + $(e.target).data('email'))
+		    })
+      		    .on("dblclick", function(e) {
+			e.stopPropagation();
+			window.location.href = 'sms:+49 160 884 4863';
+		    })
+	    })
+	})
+	
+    })
+</script>
+<script id="person-template" type="text/x-handlebars-template">
+  <div data-mobile="{{ mobile }}" data-city="{{ city }}" data-email="{{ email }}" class="person">{{ name }}</div>
+</script>
+

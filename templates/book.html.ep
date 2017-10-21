@@ -1,0 +1,97 @@
+% layout 'default';
+% title 'Book a meeting';
+%= include 'navbars/mail'
+<!-- <%= __FILE__ %> -->
+<style>
+  a h2 { color: black; }
+  a, a:hover { color: white; }
+
+  .head { font-size: 16pt; display: block; margin-bottom: 3px; margin-top: 3px }
+  
+  .duration, .hour, .minute {
+    margin: 6px; background-color: maroon; color: white; height: 32px; text-align: center; vertical-align: middle; line-height: 32px; width: 20%;
+      display: inline-block; font-size: 12pt; border-radius: 5px
+  }
+</style>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-10">
+      <div id="email" data-email="<%= param('email') %>">
+	<a href="<%= url_for('/meet') %>/<%= param('email') %>"><%= param('email') %></a>
+      </div>
+      <div id="data" style="margin-bottom:9px">
+      </div>
+      <div style="display:inline-block; margin-bottom:9px">
+	<span class="head">schedule</span>
+	<span class="time" data-time="<%= param('start') %>" id="meeting_start"></span> -
+	<span class="time" data-time="<%= param('end') %>" id="meeting_end"></span>
+      </div>
+      <form>
+	<div class="form-group">
+	  <label for="exampleInputEmail1">Subject</label>
+	  <input type="subject" class="form-control" id="subject" placeholder="Subject">
+	</div>
+	<div class="form-group">
+	  <label for="location">Location</label>
+	  <input type="location" class="form-control" id="location" placeholder="location">
+	</div>
+	<div class="checkbox">
+	  <label>
+	    <input type="checkbox" value="">Private</label>
+	</div>
+	<div class="form-group">
+	  <label for="exampleInputPassword1">Notes</label>
+	  <textarea class="form-control" rows="5"></textarea>
+	</div>
+      </form>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-10">
+      <hr />
+      <button class="btn btn-primary btn-lg" type="submit">go</button>
+    </div>
+  </div>  
+</div>
+<script>
+    $(function(){
+	var mt = moment($('#slot_start').data('time') + 'Z')
+	var templates = {};
+
+        $(("[type='text/x-handlebars-template']" )).each(function(){
+            var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
+            templates[id] = Handlebars.compile($(this).html());
+	});
+
+	$.ajax({
+	    url: '/e/v1/person/' + $('#email').data('email'),
+	    type: 'GET',
+	    dataType: "json",
+	}).then(function(d){
+	    $('#email a').html('<h2>' + d.name + '</h2>');
+	    $('#data').html(templates.data(d));
+	    return $.ajax({
+		url: '/g/v1/latlon/?q=' + d.city,
+		type: 'GET',
+		dataType: "json",
+	    })
+	}).then(function(d){
+	    return $.ajax({
+		url: '/g/v1/timezone/?location=' + [d.lat, d.lng].join(','),
+		type: 'GET',
+		dataType: "json",
+	    })
+	}).then(function(d){
+	    $('#tz').html(d.timeZoneId)
+	})
+	$('.time').each(function(i, e){
+	    var ft = moment($(e).data('time') + 'Z').tz('Europe/Berlin').format('ddd H:mm');
+	    $(e).html(ft)
+	})
+    })
+</script>
+<script id="data-template" type="text/x-handlebars-template">
+  <span id="city">{{ city }}</span> |
+  <span id="country">{{ country }}</span> |
+  <span id="tz"></span>
+</script>

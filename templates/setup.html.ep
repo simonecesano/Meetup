@@ -1,0 +1,129 @@
+% layout 'default';
+% title 'Book a meeting';
+%= include 'navbars/mail', title => 'Book a meeting';
+<!-- <%= __FILE__ %> -->
+<style>
+  a h2 { color: black; }
+  a, a:hover { color: white; }
+
+  .head { font-size: 16pt; display: block; margin-bottom: 3px; margin-top: 3px }
+  
+  .duration, .hour, .minute {
+    margin: 6px; background-color: maroon; color: white; height: 32px; text-align: center; vertical-align: middle; line-height: 32px; width: 20%;
+      display: inline-block; font-size: 12pt; border-radius: 5px
+  }
+</style>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-10">
+      <div id="email" data-email="<%= param('email') %>">
+	<a href="<%= url_for('/meet') %>/<%= param('email') %>"><%= param('email') %></a>
+      </div>
+      <div id="data" style="margin-bottom:9px">
+      </div>
+      <div style="display:inline-block; margin-right: 9px; margin-bottom:9px">
+	<span class="head">available</span>
+	<span class="time" data-time="<%= param('start') %>" id="slot_start"><%= param('start') %></span> - 
+	<span class="time" data-time="<%= param('end') %>" id="slot_end"><%= param('end') %></span>
+      </div>
+      <div style="display:inline-block; margin-left: 9px; margin-bottom:9px">
+	<span class="head">schedule</span>
+	<span class="time" data-time="<%= param('start') %>" id="meeting_start"></span> -
+	<span class="time" data-time="<%= param('end') %>" id="meeting_end"></span>
+      </div>
+      <span class="head">duration</span>
+      % for my $d (qw/15 30 45 60 90 120/) {
+      % last if $d >= $duration;
+      <div class="duration"><%= $d %></div>
+      % }
+      <div class="duration">fill</div>
+      <span class="head">hour</span>
+      % for my $h (@{ $hours }) {
+      <div class="hour"><%= $h %></div>
+      % }
+      <span class="head">minute</span>
+      % for my $m (map { 15 * $_ } (0..3)) {
+      <div class="minute"><%= $m %></div>
+      % }
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-10">
+      <hr />
+      <button id="go" class="btn btn-primary btn-lg" type="submit">go</button>
+    </div>
+  </div>  
+</div>
+<script>
+    $(function(){
+
+	var mt = moment($('#slot_start').data('time') + 'Z')
+	var templates = {};
+
+        $(("[type='text/x-handlebars-template']" )).each(function(){
+            var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
+            templates[id] = Handlebars.compile($(this).html());
+	});
+
+	var email = $('#email').data('email');
+	$.ajax({
+	    url: '/e/v1/person/' + email,
+	    type: 'GET',
+	    dataType: "json",
+	}).then(function(d){
+	    localStorage.setItem('details/' + email, JSON.stringify(d));
+
+	    $('#email a').html('<h2>' + d.name + '</h2>');
+	    $('#data').html(templates.data(d));
+	    return $.ajax({
+		url: '/g/v1/latlon/?q=' + d.city,
+		type: 'GET',
+		dataType: "json",
+	    })
+	}).then(function(d){
+	    return $.ajax({
+		url: '/g/v1/timezone/?location=' + [d.lat, d.lng].join(','),
+		type: 'GET',
+		dataType: "json",
+	    })
+	}).then(function(d){
+	    localStorage.setItem('tz/' + email, JSON.stringify(d));	    
+	    $('#tz').html(d.timeZoneId)
+	})
+		
+	$('.time').each(function(i, e){
+	    var ft = moment($(e).data('time') + 'Z').tz('Europe/Berlin').format('ddd H:mm');
+	    $(e).html(ft)
+	})
+        $('.hour').click(function(e){
+	    mt.hour($(e.target).html())
+	    $('#meeting_start').html(mt.tz('Europe/Berlin').format('ddd H:mm'))
+	    $('#meeting_start').data("time", mt.format())
+	});
+        $('.minute').click(function(e){
+	    mt.minute($(e.target).html())
+	    $('#meeting_start').html(mt.tz('Europe/Berlin').format('ddd H:mm'))
+	    $('#meeting_end').data("time", mt.format())
+	});
+	
+        $('.duration').click(function(e){
+	    var d = $(e.target).html();
+	    if (d == "fill") {
+		var md = moment($('#slot_end').data('time') + 'Z')
+		$('#meeting_end').html(md.tz('Europe/Berlin').format('ddd H:mm'))
+	    } else {
+		var md = moment(mt).add(d, 'minutes');
+		$('#meeting_end').html(md.tz('Europe/Berlin').format('ddd H:mm'))
+	    }
+	})
+	$('#go').click(function(){
+	    console.log('click');
+	    window.location.href = '/m/v1/book/<%= param('email') %>/' + $('#meeting_start').data('time') + '/' + $('#meeting_end').data('time')
+	})
+    })
+</script>
+<script id="data-template" type="text/x-handlebars-template">
+  <span id="city">{{ city }}</span> |
+  <span id="country">{{ country }}</span> |
+  <span id="tz"></span>
+</script>
