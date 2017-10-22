@@ -17,10 +17,10 @@
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-10 col-md-offset-1">
-      <div id="email" data-email="<%= $email %>">
-	<a href="<%= url_for('/meet') %>/<%= $email %>"><%= $email %></a>
-      </div>
       <div id="data">
+	<div id="email" data-email="<%= $email %>">
+	  <a href="<%= url_for('/meet') %>/<%= $email %>"></a>
+	</div>
       </div>
       <div id="slots">
       </div>
@@ -39,18 +39,37 @@
             templates[id] = Handlebars.compile($(this).html());
         });
 
+	Storage.prototype.getData = function(id){
+	    var d = this.getItem(id)
+	    if (d) { return JSON.parse(d) } else { return {} };
+	}
+
+	Storage.prototype.setData = function(id, data){
+	    return this.setItem(id, JSON.stringify(data));
+	}
+
+	Storage.prototype.setDataFromURL = function(url, id, callback){
+	    if (callback && this.getItem(id)) { callback(this.getData(id)) }
+	    return $.get(url, function(d){
+		this.setData(id, d);
+		if (callback) { callback(d) }
+	    })
+	};
+	
+	
+	
+	var d =  Object.assign(localStorage.getData('tz/' + email),
+			       localStorage.getData('data/' + email));
+	$('#data').html(templates.data(d));
+	
 	$.ajax({
-	    // get the person's freebusy
-	    url: '/e/v1/person/' + $('#email').data('email'),
+	    url: '/e/v1/person/' + email,
 	    type: 'GET',
 	    dataType: "json",
 	}).then(function(d){
-	    $('#email a').html('<h2>' + d.name + '</h2>');
-	    $('#data').html(templates.data(d));
-
-	    localStorage.setItem('me/data', JSON.stringify(d));
-	    
+	    localStorage.setItem('data/' + email, JSON.stringify(d));
 	    // get the person's lat lon
+	    console.log(d);
 	    return $.ajax({
 		url: '/g/v1/latlon/?q=' + d.city,
 		type: 'GET',
@@ -58,27 +77,42 @@
 	    })
 	}).then(function(d){
 	    // get the person's timezone
+	    console.log(d);
 	    return $.ajax({
 		url: '/g/v1/timezone/?location=' + [d.lat, d.lng].join(','),
 		type: 'GET',
 		dataType: "json",
 	    })
 	}).then(function(d){
-	    $('#tz').html(d.timeZoneId)
+	    localStorage.setItem('tz/' + email, JSON.stringify(d));
+	    d = Object.assign(d, JSON.parse(localStorage.getItem('data/' + email)));
+	    $('#data').html(templates.data(d));
 	})
-	
-	$.get('/e/v1/busy/<%= $email %>', function(d){
-	    d.slots = _.chain(d.slots).map(function(e, i){
-		var s = { start: {}, end: {} }
-		s.start.time = e[0];
-		s.end.time   = e[1];
-		s.start.format = moment(e[0] + 'Z').tz('Europe/Berlin').format('ddd Do MMM H:mm');
-		s.end.format   = moment(e[1] + 'Z').tz('Europe/Berlin').format('H:mm');
-		return s;
-	    }).value()
-	    localStorage.setItem('freebusy/' + email, JSON.stringify(d));
-	    $('#slots').html(templates.slots(d))
-	})
+
+	var foo = function(url, local, callback){
+	    var d = JSON.parse(localStorage.getItem(local));
+	    callback(d);
+	    return $.get(url, function(d){
+		localStorage.setItem(local, JSON.stringify(d));
+		callback(d);
+	    });
+	};
+
+	foo('/e/v1/busy/' + email,
+	    'freebusy/' + email,
+	    function(d){
+	    	d.slots = _.chain(d.slots).map(function(e, i){
+	    	    var s = { start: {}, end: {} }
+	    	    s.start.time = e[0];
+	    	    s.end.time   = e[1];
+	    	    s.start.format = moment(e[0] + 'Z').tz('Europe/Berlin').format('ddd Do MMM H:mm');
+	    	    s.end.format   = moment(e[1] + 'Z').tz('Europe/Berlin').format('H:mm');
+	    	    return s;
+	    	}).value();
+	    	$('#slots').html(templates.slots(d))
+	    }
+	   ).then(function(){ console.log('it is a callback') })
+	    
 	$('#mail').click(function(e){
 	    var d = JSON.parse(localStorage.getItem('freebusy/' + email));
 	    var m = JSON.parse(localStorage.getItem('me/data'));
@@ -98,9 +132,12 @@
 {{/each}}    
 </script>
 <script id="data-template" type="text/x-handlebars-template">
+  <div id="email" data-email="<%= $email %>">
+    <a href="<%= url_for('/meet') %>/<%= $email %>"><h2>{{ name }}</h2></a>
+  </div>
   <span id="city">{{ city }}</span> |
   <span id="country">{{ country }}</span> |
-  <span id="tz"></span>
+  <span id="tz">{{ timeZoneId }}</span>
 </script>
 <script id="mail-template" type="text/x-handlebars-template">Hi!
 
