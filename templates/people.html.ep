@@ -57,7 +57,7 @@
 
 	    var d = JSON.parse(localStorage.getItem('details/' + email));
 	    if (d) { $(e).html(templates.person(d)) };
-	    
+
 	    $.get('/e/v1/busy/' + email, function(d){
 		localStorage.setItem('freebusy/' + email, JSON.stringify(d));
 	    });
