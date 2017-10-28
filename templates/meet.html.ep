@@ -2,6 +2,10 @@
 % title 'Book a meeting';
 %= include 'navbars/mail'
 <!-- <%= __FILE__ %> -->
+<script src="/static/storage.js"></script>
+<script src="/static/freebusy.js"></script>
+<script src="/static/handlebars.moment.js"></script>
+<script src="/static/jquery.handlebars.js"></script>
 <style>
   a h2 { color: black; }
 
@@ -38,86 +42,25 @@
             var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
             templates[id] = Handlebars.compile($(this).html());
         });
-
-	Storage.prototype.getData = function(id){
-	    var d = this.getItem(id)
-	    if (d) { return JSON.parse(d) } else { return {} };
-	}
-
-	Storage.prototype.setData = function(id, data){
-	    return this.setItem(id, JSON.stringify(data));
-	}
-
-	Storage.prototype.setDataFromURL = function(url, id, callback){
-	    if (callback && this.getItem(id)) { callback(this.getData(id)) }
-	    return $.get(url, function(d){
-		this.setData(id, d);
-		if (callback) { callback(d) }
-	    })
-	};
-	
-	
 	
 	var d =  Object.assign(localStorage.getData('tz/' + email),
 			       localStorage.getData('data/' + email));
 	$('#data').html(templates.data(d));
-	
-	$.ajax({
-	    url: '/e/v1/person/' + email,
-	    type: 'GET',
-	    dataType: "json",
-	}).then(function(d){
-	    localStorage.setItem('data/' + email, JSON.stringify(d));
-	    // get the person's lat lon
-	    console.log(d);
-	    return $.ajax({
-		url: '/g/v1/latlon/?q=' + d.city,
-		type: 'GET',
-		dataType: "json",
-	    })
-	}).then(function(d){
-	    // get the person's timezone
-	    console.log(d);
-	    return $.ajax({
-		url: '/g/v1/timezone/?location=' + [d.lat, d.lng].join(','),
-		type: 'GET',
-		dataType: "json",
-	    })
-	}).then(function(d){
-	    localStorage.setItem('tz/' + email, JSON.stringify(d));
-	    d = Object.assign(d, JSON.parse(localStorage.getItem('data/' + email)));
-	    $('#data').html(templates.data(d));
-	})
 
-	var foo = function(url, local, callback){
-	    var d = JSON.parse(localStorage.getItem(local));
-	    callback(d);
-	    return $.get(url, function(d){
-		localStorage.setItem(local, JSON.stringify(d));
-		callback(d);
-	    });
-	};
-
-	foo('/e/v1/busy/' + email,
+	localStorage.setDataFromURL(
+	    '/e/v1/busy/' + email,
 	    'freebusy/' + email,
 	    function(d){
-	    	d.slots = _.chain(d.slots).map(function(e, i){
-	    	    var s = { start: {}, end: {} }
-	    	    s.start.time = e[0];
-	    	    s.end.time   = e[1];
-	    	    s.start.format = moment(e[0] + 'Z').tz('Europe/Berlin').format('ddd Do MMM H:mm');
-	    	    s.end.format   = moment(e[1] + 'Z').tz('Europe/Berlin').format('H:mm');
-	    	    return s;
-	    	}).value();
-	    	$('#slots').html(templates.slots(d))
+		var f = new FreeBusy(d.start, d.freebusy, 30)
+		var slots = _.map(d.slots, function(e, i){ return { start: moment(e[0]).tz('UTC'), end: moment(e[1]).tz('UTC') } });
+		$('#slots').fromTemplate('slots', { slots: slots });
 	    }
-	   ).then(function(){ console.log('it is a callback') })
-	    
+	);
+
+	
 	$('#mail').click(function(e){
 	    var d = JSON.parse(localStorage.getItem('freebusy/' + email));
 	    var m = JSON.parse(localStorage.getItem('me/data'));
-	    console.log(d);
-	    console.log(m);
 	    window.location.href = 'mailto:?subject=Free%20slots&body=' + encodeURIComponent(templates.mail(d) + m.name)
 	});
     })
@@ -125,8 +68,8 @@
 <script id="slots-template" type="text/x-handlebars-template">
 {{#each slots}}    
 <div class="slot">
-  <a href="<%= url_for('/setup/') %><%= $email %>/{{ start.time }}/{{ end.time }}">
-    <span class="time">{{ start.format }}</span>-<span class="time">{{ end.format }}</span>
+  <a href="<%= url_for('/setup/') %><%= $email %>/{{ moment-format start ''}}/{{ moment-format end '' }}">
+    <span class="time">{{ moment-format start 'ddd HH:mm' }}</span>-<span class="time">{{ moment-format end 'ddd HH:mm' }}</span>
   </a>
 </div>
 {{/each}}    
