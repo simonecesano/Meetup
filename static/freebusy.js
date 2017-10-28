@@ -63,3 +63,32 @@ FreeBusy.prototype.overlap = function(...a) {
     
     return t;
 }
+
+function Schedule(start, end){
+    var schedule = {};
+    schedule.start    = moment(start);
+    schedule.end      = moment(end);
+    schedule.slot_end = moment(end);
+    schedule.duration = schedule.end.diff(schedule.start, 'minutes');
+    schedule.hours = [];
+    schedule.minutes = [0, 15, 30, 45];
+
+    var d = schedule.duration;
+    schedule.durations = _.filter([0, 15, 30, 45, 60, 90, 120], function(e){ return e < d });
+    schedule.durations.push(schedule.duration);
+    
+    var e = schedule.end.minute ? schedule.end : schedule.end.clone().add(1, 'hour');
+    for (h = schedule.start; h < e; h = h.clone().add(1, 'hour')) { schedule.hours.push(h.hour()) }
+
+    var set = function(obj, property, value) {
+	if (property == 'start' || property == 'duration') {
+	    obj[property] = value;
+	    obj.end = obj.start.clone().add(obj.duration, 'minutes');
+	    obj.end = obj.end > obj.slot_end ? obj.slot_end : obj.end
+	}
+	return obj;
+    }
+    
+    return new Proxy(schedule, { set: set });
+}
+	
