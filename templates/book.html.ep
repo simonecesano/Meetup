@@ -1,7 +1,9 @@
 % layout 'default';
 % title 'Book a meeting';
 %= include 'navbars/mail'
-<!-- <%= __FILE__ %> -->
+<script src="/static/storage.js"></script>
+<script src="/static/handlebars.moment.js"></script>
+<script src="/static/jquery.handlebars.js"></script>
 <style>
   a h2 { color: black; }
   a, a:hover { color: white; }
@@ -40,8 +42,8 @@
 	    <input type="checkbox" value="">Private</label>
 	</div>
 	<div class="form-group">
-	  <label for="exampleInputPassword1">Notes</label>
-	  <textarea class="form-control" rows="5"></textarea>
+	  <label for="">Notes</label>
+	  <textarea id="notes" class="form-control" rows="5"></textarea>
 	</div>
       </form>
     </div>
@@ -49,7 +51,7 @@
   <div class="row">
     <div class="col-md-10">
       <hr />
-      <button class="btn btn-primary btn-lg" type="submit">go</button>
+      <button class="btn btn-primary btn-lg" type="submit" id="book">go</button>
     </div>
   </div>  
 </div>
@@ -87,6 +89,16 @@
 	$('.time').each(function(i, e){
 	    var ft = moment($(e).data('time') + 'Z').tz('Europe/Berlin').format('ddd H:mm');
 	    $(e).html(ft)
+	});
+	$('#book').click(function(){
+	    $.post('/e/v1/meeting/book', {
+		notes: $('#notes').val(),
+		attendees: $('#email').data('email'),
+		start: $('#meeting_start').data('time'),
+		end: $('#meeting_end').data('time'),
+		subject: $('#subject').val(),
+		location: $('#location').val()
+	    }, function(d){ console.log(d) })
 	})
     })
 </script>
