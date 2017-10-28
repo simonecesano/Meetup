@@ -1,5 +1,5 @@
 % layout 'default';
-% title param('email');
+% title 'Person';
 %= include 'navbars/mail'
 <!-- <%= __FILE__ %> -->
 <script src="/static/storage.js"></script>
@@ -14,42 +14,31 @@
       <hr />
       <div id="tz">
       </div>
-      <hr />
-      <div id="date">
-      </div>
     </div>
   </div>
 </div>
 <script>
     $(function(){
 	var email = "<%= param('email') %>"
-	var templates = {};
-	$(("[type='text/x-handlebars-template']" )).each(function(){
-	    var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
-	    templates[id] = Handlebars.compile($(this).html());
-	});
 	localStorage.setDataFromURL(
 	    '/e/v1/person/' + email,
 	    'data/' + email,
-	    function(d) { $('#data').html(templates.data(d)) }
+	    function(d) { $('#data').fromTemplate('data', d) }
 	).then(function(d){
 	    return localStorage.setDataFromURL(
 		'/g/v1/latlon/?q=' + d.city,
 		'tz/' + email,
-		function(){},
 		true
 	    )
 	}).then(function(d){
 	    return localStorage.setDataFromURL(
 		'/g/v1/timezone/?location=' + [d.lat, d.lng].join(','),
 		'tz/' + email,
-		function(){},
 		true
 	    )
 	}).then(function(d){
 	    $('#tz') .fromTemplate('tz', d);
 	    $('#date').fromTemplate('date', { now: new Date() });
-	    console.log(d)
 	})
     })
 </script>
