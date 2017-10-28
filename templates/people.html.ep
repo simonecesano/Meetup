@@ -48,7 +48,10 @@
 	if ("geolocation" in navigator) {
 	    navigator.geolocation.getCurrentPosition(function(position) {
 		var location = [ position.coords.latitude, position.coords.longitude ].join(',');
-		$.get("/g/v1/timezone", { location: location }, function(d){ console.log(d) } )
+		$.get("/g/v1/timezone", { location: location },
+		      function(d){
+			  console.log(d)
+		      } )
 	    });
 	} else {
 		/* geolocation IS NOT available */
