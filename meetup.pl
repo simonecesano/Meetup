@@ -92,40 +92,43 @@ get '/me/week' => sub {
     $c->render(template => 'week');
 };
 
+use DateTime::Format::HTTP;
 use DateTime::Format::Strptime;
 
 get '/setup/#email/#start/#end' => sub {
     my $c = shift;
 
-    my $strp = DateTime::Format::Strptime->new(pattern => '%FT%T');
-    my ($start, $end) = map { my $t = $strp->parse_datetime($c->param($_)); $t->set_time_zone('UTC'); $t } qw/start end/;
+    app->log->info(dump map { $_->value } grep { $_->name eq 'timeZoneId' } @{$c->req->cookies});
+    app->log->info(dump map { $_->value } grep { $_->name eq 'location' } @{$c->req->cookies});
 
-    for ($start, $end) { $_->set_time_zone('Europe/Berlin') };
+    my ($tz) = map { $_->value } grep { $_->name eq 'timeZoneId' } @{$c->req->cookies};
 
-    my @hours = (($start->hour)..($end->hour - ($end->minute ? 0 : 1)));
-    $c->stash('hours', \@hours);
-    $c->stash('duration', $end->subtract_datetime($start)->in_units('minutes'));
-    
-    app->log->info($start);
-    app->log->info($end);
-    app->log->info($c->stash('duration'));
-    app->log->info($c->stash('hours'));
+    my ($start, $end) = map {
+	app->log->info($c->param($_));
+	my $t = DateTime::Format::HTTP->parse_datetime($c->param($_));
+	app->log->info($t);
+	$t->set_time_zone('UTC');
+	$c->stash($_, $t);
+	$t
+    } qw/start end/;
+
     $c->render(template => 'setup');
 };
 
 get '/book/#email/#start/#end' => sub {
     my $c = shift;
+    my ($tz) = map { $_->value } grep { $_->name eq 'timeZoneId' } @{$c->req->cookies};
 
-    my $strp = DateTime::Format::Strptime->new(pattern => '%FT%T');
-    my ($start, $end) = map { my $t = $strp->parse_datetime($c->param($_)); $t->set_time_zone('UTC'); $t } qw/start end/;
+    my ($start, $end) = map {
+	app->log->info($c->param($_));
+	my $t = DateTime::Format::HTTP->parse_datetime($c->param($_));
+	app->log->info($t);
+	$t->set_time_zone('UTC');
+	$c->stash($_, $t);
+	$t
+    } qw/start end/;
 
-    for ($start, $end) { $_->set_time_zone('Europe/Berlin') };
-
-    my @hours = (($start->hour)..($end->hour - ($end->minute ? 0 : 1)));
-
-    $c->stash('hours', \@hours);
     $c->stash('duration', $end->subtract_datetime($start)->in_units('minutes'));
-
     $c->render(template => 'book');
 };
 
@@ -147,18 +150,4 @@ get '/me/responses' => sub {
 app->start;
 
 __DATA__
-
-@@ index.html.ep
-% layout 'default';
-% title 'Welcome';
-%= include 'navbars/mail'
-<div class="container-fluid">
-  <div class="row">
-    <div class="col-md-10 col-md-offset-1">
-      <h1>Welcome to the Mojolicious real-time web framework!</h1>
-      To learn more, you can browse through the documentation
-      <%= link_to 'here' => '/perldoc' %>.
-    </div>
-  </div>
-</div>
 
