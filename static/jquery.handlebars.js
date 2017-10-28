@@ -5,7 +5,6 @@
 	$(window.document.body).find("[type='text/x-handlebars-template']").each(function(){
 	    var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
 	    templates[id] = Handlebars.compile($(this).html());
-	    console.log($(this).html())
 	})
     });
 
@@ -24,3 +23,18 @@
     };
     
 }( jQuery ));
+
+/****************************************************************************************************
+
+    $(selector).fromTemplate('id', data);
+
+Replaces HTML on selector with template merged with data
+
+Equivalent to:
+
+    var t = Handlebars.compile($('#' + id + '-template').html());
+    $(selector).html(t(data))
+
+but with the compiling cached upfront.
+
+*****************************************************************************************************/
