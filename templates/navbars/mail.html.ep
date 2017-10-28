@@ -2,7 +2,7 @@
   <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
       <div class="navbar-header">
-	<div class="navbar-text" style="display:inline-block;font-weight:bold;font-size:14pt;color:white"><%= $title %></div>
+	<div id="navbar-title" class="navbar-text" style="display:inline-block;font-weight:bold;font-size:14pt;color:white"><%= $title %></div>
 	<button class="collapsed navbar-toggle" data-target="#bs-example-navbar-collapse-2" data-toggle="collapse" type="button">
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
