@@ -16,10 +16,14 @@
     font-size: 16pt; border-radius: 5px; background-color: Navy; color: white;  
 }
 </style>
+%== localize begin
+
 %= javascript 'https://cdnjs.cloudflare.com/ajax/libs/jquery.touchswipe/1.6.18/jquery.touchSwipe.min.js'
 %= javascript 'https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.js'
 %= javascript 'https://cdnjs.cloudflare.com/ajax/libs/hammer-time/1.1.0/hammer-time.min.js'
 %= javascript 'https://cdn.rawgit.com/hammerjs/jquery.hammer.js/90c2f3bb/jquery.hammer.js'
+
+%end
 <div class="container-fluid">
   <div class="row">
     <div class="col-md-10 col-md-offset-1">
@@ -44,16 +48,14 @@
 	if ("geolocation" in navigator) {
 	    navigator.geolocation.getCurrentPosition(function(position) {
 		var location = [ position.coords.latitude, position.coords.longitude ].join(',');
-		$.get("/g/v1/timezone", { location: location }, function(d){
-		    console.log(d);
-		} )
+		$.get("/g/v1/timezone", { location: location }, function(d){ console.log(d) } )
 	    });
 	} else {
 		/* geolocation IS NOT available */
 	}
 	
 	$('.person').each(function(i, e){
-	    var email = $(e).html();
+	    var email = $(e).data('email');
 
 	    var d = JSON.parse(localStorage.getItem('details/' + email));
 	    if (d) { $(e).html(templates.person(d)) };
@@ -97,6 +99,6 @@
     })
 </script>
 <script id="person-template" type="text/x-handlebars-template">
-  <div data-mobile="{{ mobile }}" data-city="{{ city }}" data-email="{{ email }}" class="person">{{ name }}</div>
+  <div data-mobile="{{ mobile }}" data-city="{{ city }}" data-email="{{ email }}" class="person">{{ name }} {{ surname }}</div>
 </script>
 
