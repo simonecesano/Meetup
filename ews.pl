@@ -82,6 +82,38 @@ get '/circle' => [format => ['json'] ] => sub {
     $c->render(json => $circle);
 };
 
+get '/mail/requests' => sub {
+    my $c = shift;
+    my $ua  = Mojo::UserAgent->new();
+    $c->stash('id', $c->param('item'));
+
+    my $xml = $c->render_to_string(template => 'ews/requests', format => 'xml');
+    my $url = Mojo::URL->new(app->config->{ews});
+
+    $url->userinfo(join ':', $c->session('user'), $c->session('password'));
+
+    my $tx = $ua->post($url => {'Content-Type' => 'text/xml', 'Accept-Encoding' => 'None' } => $xml);
+
+    if ($c->param('f') eq 'xml') {
+	$c->res->headers->content_type('text/xml');
+	$c->render(text => $tx->res->dom || 'nothing found');
+	return;
+    }
+
+    my @items;
+    $tx->res->dom->find('MeetingRequest')
+	->each(sub{
+		   my $i = shift;
+		   push @items, {
+				 start     => $i->at('Start')->all_text,
+				 end       => $i->at('End')->all_text,
+				 subject   => $i->at('Subject')->all_text,
+				 organizer => $i->at('Organizer')->at('Name')->all_text,
+				}
+	       });
+    $c->render(json => \@items);
+};
+
 get '/mail/*item' => sub {
     my $c = shift;
     my $ua  = Mojo::UserAgent->new();
@@ -382,3 +414,38 @@ __DATA__
     </m:GetItem>
   </soap:Body>
 </soap:Envelope>    
+@@ ews/requests.xml.ep
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xmlns:m="http://schemas.microsoft.com/exchange/services/2006/messages"
+               xmlns:t="http://schemas.microsoft.com/exchange/services/2006/types"
+               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Header>
+    <t:RequestServerVersion Version="Exchange2007_SP1" />
+  </soap:Header>
+  <soap:Body>
+    <m:FindItem Traversal="Shallow">
+      <m:ItemShape>
+        <t:BaseShape>Default</t:BaseShape>
+        <t:AdditionalProperties>
+          <t:FieldURI FieldURI="item:Subject" />
+	  <t:FieldURI FieldURI="item:ItemClass" />
+	  <t:FieldURI FieldURI="calendar:Start" />
+	  <t:FieldURI FieldURI="calendar:End" />
+	  <t:FieldURI FieldURI="calendar:RequiredAttendees" />
+        </t:AdditionalProperties>
+      </m:ItemShape>
+      <m:ParentFolderIds>
+        <t:DistinguishedFolderId Id="inbox" />
+      </m:ParentFolderIds>
+      <m:Restriction>
+	<t:IsEqualTo>
+	  <t:FieldURI FieldURI="item:ItemClass" />
+	  <t:FieldURIOrConstant>
+	    <t:Constant Value="IPM.Schedule.Meeting.Request" />
+	  </t:FieldURIOrConstant>
+	</t:IsEqualTo>
+      </m:Restriction>
+    </m:FindItem>
+  </soap:Body>
+</soap:Envelope>
