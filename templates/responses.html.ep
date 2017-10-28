@@ -1,0 +1,44 @@
+% layout 'default';
+% title 'Calendar responses';
+%= include 'navbars/mail'
+<!-- <%= __FILE__ %> -->
+<script src="/static/storage.js"></script>
+<script src="/static/handlebars.moment.js"></script>
+<script src="/static/jquery.handlebars.js"></script>
+<style>
+  a h2 { color: black; }
+
+  a, a:hover { color: white; }
+  .response, #mail {
+    margin: 6px; background-color: maroon; color: white; text-align: left; vertical-align: middle; font-size: 12pt;
+    border-radius: 5px;font-size: 12pt;
+  }
+  #mail {
+    background-color: Navy; color: white;  
+  }
+</style>
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-10 col-md-offset-1">
+      <div id="data">
+	data goes here
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+    $(function(){
+	$.get('http://localhost:5000/e/v1/mail/requests', function(d){
+	    $('#data') .fromTemplate('responses', { responses: d });
+	})
+    })
+</script>
+<script id="responses-template" type="text/x-handlebars-template">
+{{#each responses}}    
+<div class="response">
+  <span class="time">{{ moment-format start 'ddd DD-MMM hh:mm' }}</span>-<span class="time">{{ moment-format end 'hh:mm' }}</span><br />
+  <span class="subject">{{ subject }}</span><br />
+  <span class="organizer">{{ organizer }}</span><br />
+</div>
+{{/each}}    
+</script>

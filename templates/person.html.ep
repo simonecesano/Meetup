@@ -1,0 +1,77 @@
+% layout 'default';
+% title param('email');
+%= include 'navbars/mail'
+<!-- <%= __FILE__ %> -->
+<script src="/static/storage.js"></script>
+<script src="/static/handlebars.moment.js"></script>
+<script src="/static/jquery.handlebars.js"></script>
+
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-md-10 col-md-offset-1">
+      <div id="data">
+      </div>
+      <hr />
+      <div id="tz">
+      </div>
+      <hr />
+      <div id="date">
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+    $(function(){
+	var email = "<%= param('email') %>"
+	var templates = {};
+	$(("[type='text/x-handlebars-template']" )).each(function(){
+	    var id = $(this).attr('id').replace(/\W*template/i, '').replace(/\W+/, '_')
+	    templates[id] = Handlebars.compile($(this).html());
+	});
+	localStorage.setDataFromURL(
+	    '/e/v1/person/' + email,
+	    'data/' + email,
+	    function(d) { $('#data').html(templates.data(d)) }
+	).then(function(d){
+	    return localStorage.setDataFromURL(
+		'/g/v1/latlon/?q=' + d.city,
+		'tz/' + email,
+		function(){},
+		true
+	    )
+	}).then(function(d){
+	    return localStorage.setDataFromURL(
+		'/g/v1/timezone/?location=' + [d.lat, d.lng].join(','),
+		'tz/' + email,
+		function(){},
+		true
+	    )
+	}).then(function(d){
+	    $('#tz') .fromTemplate('tz', d);
+	    $('#date').fromTemplate('date', { now: new Date() });
+	    console.log(d)
+	})
+    })
+</script>
+<script id="data-template" type="text/x-handlebars-template">
+  <div id="email" data-email="<%= $email %>">
+    <a href="<%= url_for('/meet') %>/<%= $email %>"><h2>{{ name }} {{ surname }}</h2></a>
+  </div>
+  <div id="city">{{ city }}</div>
+  <div id="country">{{ country }}</div>
+  <div id="mobile">{{ mobile }}</div>
+  <div id="email">{{ email }}</div>
+</script>
+<script id="tz-template" type="text/x-handlebars-template">
+  <div id="timeZoneId">{{ timeZoneId }}</div>
+    <div id="timeZoneName">{{ timeZoneName }}</div>
+    <div id="latlon">{{ lat }},{{ lng }}</div>
+</script>
+<script id="date-template" type="text/x-handlebars-template">
+  {{ moment-do 'add' now 20 'days' 'DD-MMM ddd'}} | 
+  {{ moment-format now 'DD-MMM ddd' }}
+</script>
+<script id="test-template" type="text/x-handlebars-template">
+  {{ moment-do 'add' now 20 'days' 'DD-MMM ddd'}} | 
+  {{ moment-format now 'DD-MMM ddd' }}
+</script>
