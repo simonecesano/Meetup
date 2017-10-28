@@ -15,9 +15,9 @@ get '/latlon' => sub {
     my $c = shift;
 
     if (my $json = $c->chi->get('latlon::' . $c->param('q'))) {
-	app->log->info(sprintf "location %s cached", $c->param('q'));
-	$c->render(json => $json->{results}->[0]->{geometry}->{location} );
-	return;
+    	app->log->info(sprintf "location %s cached", $c->param('q'));
+    	$c->render(json => $json->{results}->[0]->{geometry}->{location} );
+    	return;
     }
 
     
