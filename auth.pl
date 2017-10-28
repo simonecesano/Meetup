@@ -38,7 +38,8 @@ post '/login' => sub {
 
 	    $c->session('ews', $ews);
 	    app->log->info("Redirect to " . (app->config->{home} ? $c->req->url->to_abs->path(app->config->{home}) : 'user'));
-	    $c->redirect_to(app->config->{home} ? $c->req->url->to_abs->path(app->config->{home})->scheme('https') : 'user');
+	    app->log->info("Scheme is " . $c->req->url->to_abs->scheme);
+	    $c->redirect_to(app->config->{home} ? $c->req->url->to_abs->path(app->config->{home})->scheme($c->req->url->to_abs->scheme) : 'user');
 	} else {
 	    $c->render(template => 'login/error');
 	}
