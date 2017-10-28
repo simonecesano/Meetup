@@ -5,6 +5,7 @@ use lib './lib';
 use Mojo::UserAgent::LWP::NTLM;
 
 plugin 'Config';
+plugin 'Localizer';
 
 get '/' => sub { shift->redirect_to('login') };
 
