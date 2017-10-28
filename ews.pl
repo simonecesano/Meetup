@@ -7,6 +7,8 @@ use Mojolicious::Lite;
 
 use Mojo::UserAgent::LWP::NTLM;
 use DateTime;
+use DateTime::Format::Strptime;
+
 use Meeting;
 use DBI;
 
@@ -153,19 +155,19 @@ my $busy = sub {
     my $xml = $c->render_to_string(template => 'ews/freebusy', format => 'xml');
     
     my $tx = $ua->post($url => {'Content-Type' => 'text/xml', 'Accept-Encoding' => 'None' } => $xml);
+    # app->log->info($tx->res->message);
+    # app->log->info($tx->res->body);
     my $fb = $tx->res->dom->at('MergedFreeBusy')->all_text;
     return $fb;
 };
 
-use DateTime::Format::Strptime;
-
 get '/busy/#email' => sub {
     my $c = shift;
 
-    my $strp = DateTime::Format::Strptime->new(pattern => '%FT%T');
+    my $strp = DateTime::Format::Strptime->new(pattern => '%FT%T%z');
     my $start = $strp->parse_datetime($c->param('start') =~ s/z$//ri) || DateTime->now;
 
-    app->log->info($start);
+    app->log->info('start ' . $start);
     
     if ($start->minute >= 30) { $start->set_minute(30) } else { $start->set_minute(0) }
     $start->set_second(0);
@@ -251,6 +253,38 @@ get '/q/*xml' => sub {
 
     $c->res->headers->content_type('text/xml');
     $c->render(text => $dom);
+};
+
+any '/meeting/book' => sub {
+    # start end subject notes attendees
+    my $c = shift;
+    my $url = Mojo::URL->new(app->config->{ews});
+    $url->userinfo(join ':', $c->session('user'), $c->session('password'));
+
+    my $h = $c->req->params->to_hash;
+
+    for (grep { /\[\]$/} keys %$h) {
+	app->log->info($_);
+	my $k = $_ =~ s/\[\]$//r;
+	$h->{$k} = delete $h->{$_}
+    }
+    $h->{attendees} = ref $h->{attendees} ? $h->{attendees} : [ $h->{attendees} ];
+    $c->stash($h);
+
+    app->log->info(dump $h);
+    app->log->info(ref app->renderer);
+
+    my $xml = $c->render_to_string(template => 'ews/book', format => 'xml');
+
+    app->log->info($url);
+    
+    my $ua  = Mojo::UserAgent->new();
+    my $tx = $ua->post($url => {'Content-Type' => 'text/xml', 'Accept-Encoding' => 'None' } => $xml);
+
+    my $dom = $tx->res->dom;
+    app->log->info($tx->res->message);
+    $c->res->headers->content_type('text/xml');
+    $c->render(text => $dom || 'all ok');
 };
 
 app->start;
@@ -449,3 +483,38 @@ __DATA__
     </m:FindItem>
   </soap:Body>
 </soap:Envelope>
+@@ layouts/default.xml.ep
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xmlns:m="http://schemas.microsoft.com/exchange/services/2006/messages"
+               xmlns:t="http://schemas.microsoft.com/exchange/services/2006/types"
+               xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+  <soap:Header>
+    <t:RequestServerVersion Version="Exchange2013" />
+  </soap:Header>
+    <soap:Body>
+<%= content %></soap:Body>
+</soap:Envelope>
+    
+@@ ews/book.xml.ep
+% layout 'default';
+    <m:CreateItem SendMeetingInvitations="SendToAllAndSaveCopy">
+      <m:Items>
+        <t:CalendarItem>
+          <t:Subject><%= $subject %></t:Subject>
+          <t:Body BodyType="Text"><%= $notes %></t:Body>
+          <t:Start><%= $start %></t:Start>
+          <t:End><%= $end %></t:End>
+	  <t:Location><%= $location %></t:Location>
+	  <t:RequiredAttendees>
+	    % for my $attendee (@{$attendees}) {
+            <t:Attendee>
+              <t:Mailbox>
+                <t:EmailAddress><%= $attendee %></t:EmailAddress>
+              </t:Mailbox>
+            </t:Attendee>
+	    % }
+	  </t:RequiredAttendees>
+        </t:CalendarItem>
+      </m:Items>
+    </m:CreateItem>
