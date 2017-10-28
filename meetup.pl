@@ -16,6 +16,7 @@ hook (before_dispatch => sub {
       });
 
 plugin 'Persist' => { dbh => DBI->connect('dbi:SQLite:dbname=./jobs.db'), id => 'user' };
+plugin 'Localizer';
 
 get '/' => sub {
     my $c = shift;
@@ -133,6 +134,16 @@ get '/prefs/me' => sub {
     $c->render(template => 'prefs');
 };
 
+get '/person/#email' => sub {
+    my $c = shift;
+    $c->render(template => 'person');
+};
+
+get '/me/responses' => sub {
+    my $c = shift;
+    $c->render(template => 'responses');
+};
+
 app->start;
 
 __DATA__
@@ -149,53 +160,5 @@ __DATA__
       <%= link_to 'here' => '/perldoc' %>.
     </div>
   </div>
-</div>
-@@ layouts/default.html.ep
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <title><%= title %></title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/7.0.0/normalize.css" media="screen" />
-    <script src="https://code.jquery.com/jquery-2.2.4.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js"></script>
-    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" media="screen" />
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.10/handlebars.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.13/moment-timezone-with-data.min.js"></script>
-    <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet"> 
-    <style>body { margin-top: 70px; font-family: 'Lato', sans-serif; }</style>
-  </head>
-  <body>
-    <%= content %>
-  </body>
-</html>
-@@ navbars/mail.html.ep
-<div class="col-md-10 col-md-offset-1">
-  <nav class="navbar navbar-inverse navbar-fixed-top">
-    <div class="container-fluid">
-      <div class="navbar-header">
-	<div class="navbar-text" style="display:inline-block;font-weight:bold;font-size:14pt;color:white"><%= $title %></div>
-	<button class="collapsed navbar-toggle" data-target="#bs-example-navbar-collapse-2" data-toggle="collapse" type="button">
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-          <span class="icon-bar"></span>
-	</button>
-	<a class="navbar-brand" href="/"><i class="fa fa-crop fa-lg" aria-hidden="true"></i></a>
-      </div>
-      <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-2">
-	<ul class="nav navbar-nav">
-	  <li ><a href="<%= url_for('/people') %>" >Home</a></li>
-	  <li ><a href="<%= url_for('/search') %>" >Search people</a></li>
-	  <li ><a href="<%= url_for('/me/schedule') %>" >My free slots</a></li>
-	  <li ><a href="<%= url_for('/me/week') %>" >My weeks</a></li>
-	  <li ><a href="<%= url_for('/prefs/me') %>" >Preferences</a></li>
-	  <li ><a href="/u/v1/login" >Login</a></li>    
-	</ul>
-      </div>
-    </div>
-  </nav>
 </div>
 
