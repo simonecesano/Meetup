@@ -1,6 +1,45 @@
-Storage.prototype.getData = function(id){
-    var d = this.getItem(id)
-    if (d) { return JSON.parse(d) } else { return undefined };
+Storage.prototype.keys = function(filter){
+    var keys = [];
+    // console.log(typeof filter);
+    
+    if ((typeof filter) == 'undefined') {
+	filter = function(){ return true }
+    } else if ((typeof filter) == 'string') {
+	// console.log('String')
+	var re = new RegExp(filter);
+	filter = function(e, i){ return e.match(re) }
+    } else if (filter instanceof RegExp) {
+	// console.log('RegExp');
+	var re = filter;
+	filter = function(e){ return e.match(re) }
+    } else if (filter instanceof Function) {
+	// console.log('Function')
+    };
+    
+    for (i = 0; i < this.length; i++) { var k = localStorage.key(i); if (filter(k, i)) { keys.push(k) } }
+    return keys.sort();
+}
+
+Storage.prototype.values = function(filter) {
+    var s = this;
+    var keys = s.keys(filter);
+    var values = [];
+
+    keys.forEach(function(e, i){ values.push(s.getData(e)) })
+    return values;
+};
+
+
+Storage.prototype.getData = function(){
+    var s = this;
+    var args = Array.prototype.slice.call(arguments);
+    var o = {};
+
+    args.forEach(function(id) {
+	var d = s.getItem(id);
+	if (d) { o = Object.assign(o, JSON.parse(d)) } 
+    });
+    return o
 }
 
 Storage.prototype.setData = function(id, data, merge){
@@ -25,12 +64,30 @@ Storage.prototype.setDataFromURL = function(url, id, callback, merge){
     })
 };
 
+Storage.prototype.getOrFetch = function(id, url, callback){
+    var s = this;
+    if (arguments[2] instanceof Function) { callback = arguments[2] }
+
+    var d = s.getItem(id);
+
+    if (d && JSON.parse(d)) {
+	callback(d)
+	// this is not good; should return a promise
+	return d;
+    }
+    
+    return $.get(url, function(d){
+	s.setData(id, d)
+	if (callback) { callback(d) }
+    })
+}
+
 
 /****************************************************************************************************
 
     getData(id)
 
-gets data from storage and parses it via JSON
+gets data from storage and parses it via JSON; with multiple id's it MERGES the data. Use values() to get multiple values as an array.
 
     setData(id, data[, merge])
 
