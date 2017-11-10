@@ -74,7 +74,7 @@ function Schedule(start, end){
     schedule.minutes = [0, 15, 30, 45];
 
     var d = schedule.duration;
-    schedule.durations = _.filter([0, 15, 30, 45, 60, 90, 120], function(e){ return e < d });
+    schedule.durations = _.filter([15, 30, 45, 60, 90, 120], function(e){ return e < d });
     schedule.durations.push(schedule.duration);
     
     var e = schedule.end.minute ? schedule.end : schedule.end.clone().add(1, 'hour');
