@@ -8,7 +8,7 @@
 	})
     });
 
-    $.fn.fromTemplate = function(templateName, data){
+    $.fn.fromTemplate = function(templateName, data, callback){
 	var t = templates[templateName];
 	if (t === undefined){
 	    t = Handlebars.compile($('#' + templateName + '-template').first().html());
@@ -16,6 +16,8 @@
 	} else {
 	}
 	this.html(t(data));
+	if (callback) { callback() }
+	return this;
     };
 
     $.fn.template = function(templateName){
