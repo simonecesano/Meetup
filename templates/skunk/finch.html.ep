@@ -1,0 +1,273 @@
+% layout 'default';
+% title 'Finch.js test';
+%= include 'navbars/single_page'
+%== localize begin
+<script src="https://cdnjs.cloudflare.com/ajax/libs/URI.js/1.19.0/URI.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/later/1.2.0/later.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/URI.js/1.19.0/URITemplate.js"></script>
+%end
+<script src="/static/finch.js"></script>
+<script src="/static/finch.util.js"></script>
+<script src="/static/URI.array.js"></script>
+<script>
+ %= include 'header', format => 'js'
+</script>
+<div class="container-fluid">
+  <div class="row">
+    <div id="content" class="col-md-10 col-md-offset-1">
+      <div id="output" data-template="date">
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  $(function(){
+      var app = new Meetup;
+
+      Finch.route("/people", function(c) {
+	  app.setUpdater(function(){
+	      document.title = 'People';
+	      $('#navbar-title').html(document.title)
+
+	      console.log('people template loaded ' + (new Date()))
+	      $('#output').fromTemplate('people', { people: localStorage.values(/person/i) })
+	  }, later.parse.recur().every(20).second().startingOn(5))
+      }).listen();
+
+      Finch.route("/", function(c) {
+	  Finch.navigate('/people');
+      }).listen()
+  
+      Finch.route("/person/:email", function(c) {
+	  app.setUpdater(function(){
+	      
+	      c = localStorage.getData('person/' + c.email )
+
+	      document.title = 'Person details';
+	      $('#navbar-title').html(document.title)
+	      
+	      console.log('person template loaded ' + (new Date()))
+	      $('#output').fromTemplate('person', c)
+	  }, later.parse.recur().every(20).second().startingOn(10))
+      }).listen();
+
+      Finch.route("/slots/:email", function(c) {
+	  c = Object.assign(localStorage.getData('freebusy/' + c.email),
+			    localStorage.getData('person/' + c.email ));
+	  app.setUpdater(function(){
+	      document.title = 'Free slots';
+	      $('#navbar-title').html(document.title)
+	      $('#output').fromTemplate('slots', c )
+	  }, later.parse.recur().every(20).second().startingOn(10))
+      }).listen();
+
+      Finch.route("/schedule/:email/:start/:end", function(c) {
+	  c = Object.assign(c, localStorage.getData('person/' + c.email ))
+	  var schedule = new Schedule(c.start, c.end);
+	  c.schedule = schedule;
+	  
+	  document.title = 'Schedule meeting';
+	  $('#navbar-title').html(document.title)
+	  
+	  $('#output').fromTemplate('schedule', c)
+	  $('.hour').on('click', function(e){
+	      c.schedule.start = c.schedule.start.hour($(e.target).html())
+	      $('#schedule').fromTemplate('time', c.schedule)
+	  });
+          $('.minute').on('click', function(e){
+	      c.schedule.start = c.schedule.start.minute($(e.target).html())
+	      $('#schedule').fromTemplate('time', c.schedule)
+	  });
+          $('.duration').on('click', function(e){
+	      c.schedule.duration = $(e.target).data('duration')
+	      $('#schedule').fromTemplate('time', c.schedule)
+	  })
+	  $('#go').click(function(){
+	      Finch.navigate(Finch.build("/setup/:email/:start/:end", { email: c.email, start: schedule.start.format(), end: schedule.end.format() }))
+	  })
+	  $('#back').click(function(){
+	      Finch.navigate(Finch.build("/slots/:email", { email: c.email }))
+	  })
+	  app.clearUpdater()
+      }).listen()
+      
+      Finch.route("/setup/:email/:start/:end", function(c) {
+	  c = Object.assign(c, localStorage.getData('person/' + c.email ))
+	  var schedule = new Schedule(c.start, c.end);
+	  c.schedule = schedule;
+	  
+	  document.title = 'Schedule meeting';
+	  $('#navbar-title').html(document.title)
+	  $('#output').fromTemplate('book', c)
+	  $('#book').click(function(){
+	      $.post('/e/v1/meeting/book', {
+		  notes: $('#notes').val(),
+		  attendees: c.email,
+		  start: $('#meeting_start').data('time'),
+		  end: $('#meeting_end').data('time'),
+		  subject: $('#subject').val(),
+		  location: $('#location').val()
+	      }, function(d){
+		  console.log(d)
+	      })
+	  })
+      }).listen()
+
+  })
+</script>
+<script type="text/x-handlebars-template" id="people-template">
+  <div>
+    {{#each people }}
+    <div class="person"><a href="#person/{{ email }}"><div class="name">{{ name }} {{ surname }}</div></a>
+      <i class="fa fa-square" aria-hidden="true"></i>
+    </div>
+    {{/each }}
+    <div id="add">
+      <div>add another</div>
+      <i class="fa fa-plus-square" aria-hidden="true"></i>
+    </div>
+  </div>
+</script>
+
+<script type="text/x-handlebars-template" id="person-template">
+  <div id="header">
+    <h3>{{ name }} {{ surname }}</h3>
+    <div>{{ title }} </div>    
+  </div>
+  <div>{{ city }} | {{ timeZoneId }}</div>
+  <div>{{ mobile }} </div>
+  <hr />
+  <div id="actions">
+    <i class="fa fa-square" aria-hidden="true"></i>
+    <a href="#slots/{{ email }}"><i class="fa fa-calendar-plus-o" aria-hidden="true"></i></a>
+    <i class="fa fa-phone" aria-hidden="true"></i>
+    <i class="fa fa-user" aria-hidden="true"></i>
+  </div>
+</script>
+<script type="text/x-handlebars-template" id="slots-template">
+  <div id="header">
+    <h3>{{ name }} {{ surname }}</h3>
+    <div id="location">{{ city }} | {{ timeZoneId }} </div>
+  </div>
+  {{#each slots as |slot i| }}
+  <div class="slot">
+    <a href="#schedule/{{ ../email }}/{{ slot.[0] }}/{{ slot.[1] }}">
+    <div class="day">{{ moment-format slot.[0] 'ddd DD MMM' }}</div>
+    <div class="time">{{ moment-format slot.[0] 'HH:mm' }}-{{ moment-format slot.[1] 'HH:mm' }}</div>
+    </a>
+  </div>
+  {{/each }}
+</script>
+<script type="text/x-handlebars-template" id="time-template">
+    <span class="time"
+	  data-time="{{ moment-format start '' }}"
+	  id="meeting_start">{{
+      moment-format start 'DD MMM, ddd HH:mm'
+      }}</span>-<span class="time" data-time="{{ moment-format end '' }}" id="meeting_end">{{ moment-format end 'HH:mm' }}
+    </span>
+</script>
+<script type="text/x-handlebars-template" id="schedule-template">
+  <div id="header">
+    <h3>{{ name }} {{ surname }}</h3>
+    <div id="location">{{ city }} | {{ timeZoneId }} </div>
+    </div>
+    <hr />
+  <div id="schedule">
+    <span class="time"
+	  data-time="{{ moment-format start '' }}"
+	  id="meeting_start">{{
+      moment-format start 'DD MMM, ddd HH:mm'
+      }}</span>-<span class="time" data-time="{{ moment-format end '' }}" id="meeting_end">{{ moment-format end 'HH:mm' }}
+    </span>
+  </div>
+    <hr />
+  <div>
+     {{#with schedule }}
+    <div class="head">hour</div>
+    {{#each hours }}
+    <div class="hour">{{ this }}</div>
+    {{/each}}
+    <div class="head">minute</div>
+    {{#each minutes }}
+    <div class="minute">{{ this }}</div>
+    {{/each}}
+    <div class="head">duration</div>
+    {{#each durations }}
+    <div data-duration="{{ this }}" class="duration">{{ this }}</div>
+    {{/each}}
+    {{/with}}
+  </div>
+  <hr />
+  <button id="go" class="btn btn-primary btn-lg" type="submit">go</button>&emsp;
+  <button id="back" class="btn btn-info btn-lg" type="">back</button>
+</script>
+<script type="text/x-handlebars-template" id="book-template">
+  <div id="header">
+    <h3>{{ name }} {{ surname }}</h3>
+    <div>{{ title }} </div>    
+  </div>
+  <div>{{ city }} | {{ timeZoneId }}</div>
+  <hr />
+  <div id="data" style="margin-bottom:9px">
+  </div>
+  <div style="display:inline-block; margin-bottom:9px">
+    <span class="head">schedule</span>
+    <span class="time" data-time="{{ moment-format schedule.start '' }}" id="meeting_start">{{ moment-format schedule.start 'ddd DD-MMM HH:mm'  }}</span> -
+    <span class="time" data-time="{{ moment-format schedule.end '' }}" id="meeting_end">{{ moment-format schedule.end 'HH:mm'  }}</span>
+  </div>
+  <form>
+    <div class="form-group">
+      <label for="subject">Subject</label>
+      <input type="subject" class="form-control" id="subject" placeholder="Subject">
+    </div>
+    <div class="form-group">
+      <label for="location">Location</label>
+      <input type="location" class="form-control" id="location" placeholder="location">
+    </div>
+    <div class="checkbox">
+      <label>
+	<input type="checkbox" value="">Private</label>
+    </div>
+    <div class="form-group">
+      <label for="notes">Notes</label>
+      <textarea id="notes" class="form-control" rows="5"></textarea>
+    </div>
+  </form>
+  <hr />
+  <button id="book" class="btn btn-primary btn-lg" type="submit">book</button>&emsp;
+  <button id="back" class="btn btn-info btn-lg" type="">back</button>
+</script>
+<style>
+.name, #add div { display: inline-block; width: 85%; margin-left: 6px }
+    .person:first-child, .slot:first-child {
+	border-top: thin solid white;
+    }
+    .person, #add, .slot {
+	display: inline-block; width: 100%;
+	border-bottom: thin solid white;
+	padding-top: 12px;
+	padding-bottom: 12px;
+    }
+      .slot {
+	padding-top: 9px;
+	padding-bottom: 9px;
+
+      }
+
+      .person .fa, #add .fa { margin-left: 6px }
+    #actions .fa { margin-left: 12px }
+
+    .day { display: inline-block; width: 70%; margin-left: 6px }
+    div.time { display: inline-block; margin-left: 6px }
+    #header { padding-bottom: 6px }
+
+    .fa-square { color: DarkGreen }
+.fa-plus-square { color: DarkBlue }
+
+  .duration, .hour, .minute {
+    margin: 6px; color: SlateGray; height: 32px; text-align: center; vertical-align: middle; line-height: 32px; width: 20%;
+      display: inline-block; font-size: 12pt; border-radius: 5px; border: thin solid white 
+  }
+a { color: SlateGray }
+.btn { width: 6em; border-radius: 5px; text-align: center }
+</style>
