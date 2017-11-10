@@ -14,6 +14,13 @@
       <hr />
       <div id="tz">
       </div>
+      <hr />
+      <div id="actions">
+	<a href="/m/v1/meet/<%= param('email') %>">Meet</a>
+	<a href="#">Call</a>
+	<a href="#">Text</a>
+	<a href="#">Email</a>
+      </div>
     </div>
   </div>
 </div>
@@ -46,10 +53,11 @@
   <div id="email" data-email="<%= $email %>">
     <a href="<%= url_for('/meet') %>/<%= $email %>"><h2>{{ name }} {{ surname }}</h2></a>
   </div>
-  <div id="city">{{ city }}</div>
-  <div id="country">{{ country }}</div>
+  <div id="title">{{ title }}</div>
+  <div id="city">{{ city }} | {{ country }}</div>
   <div id="mobile">{{ mobile }}</div>
   <div id="email">{{ email }}</div>
+  <div id="location">{{ location }}</div>
 </script>
 <script id="tz-template" type="text/x-handlebars-template">
   <div id="timeZoneId">{{ timeZoneId }}</div>
