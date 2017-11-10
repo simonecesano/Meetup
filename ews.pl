@@ -8,6 +8,8 @@ use Mojolicious::Lite;
 use Mojo::UserAgent::LWP::NTLM;
 use DateTime;
 use DateTime::Format::Strptime;
+use DateTime::TimeZone;
+
 
 use Meeting;
 use DBI;
@@ -155,8 +157,6 @@ my $busy = sub {
     my $xml = $c->render_to_string(template => 'ews/freebusy', format => 'xml');
     
     my $tx = $ua->post($url => {'Content-Type' => 'text/xml', 'Accept-Encoding' => 'None' } => $xml);
-    # app->log->info($tx->res->message);
-    # app->log->info($tx->res->body);
     my $fb = $tx->res->dom->at('MergedFreeBusy')->all_text;
     return $fb;
 };
@@ -170,21 +170,24 @@ get '/busy/#email' => sub {
     app->log->info('start ' . $start);
     
     if ($start->minute >= 30) { $start->set_minute(30) } else { $start->set_minute(0) }
+    # $start->set_hour(0);
     $start->set_second(0);
 
     my $fb = $busy->($c, $start);
 
+    app->log->info($fb);
+    
     my $person = Meeting::Person->new({ email => $c->param('email'), start => $start, freebusy => $fb });
 
     $person->habits([
-		     { daily => { start => { hours => 9, minutes => 0 }, end => { hours => 18, minutes => 0 }, time_zone => "Europe/Berlin" } },
+		     {  daily => { start => { hours => 9, minutes => 0 }, end => { hours => 18, minutes => 0 }, time_zone => "Europe/Berlin" } },
 		     { -daily => { start => { hours => 12, minutes => 0 }, end => { hours => 13, minutes => 0 }, time_zone => "Europe/Berlin" } },
 		     { -weekly => { days => [6, 7], time_zone => "Europe/Berlin" } }
 		    ]);
     
     my @slots = $person->free_slots;
     
-    $c->render(json => { freebusy => $person->freebusy, slots => \@slots, start => $person->start });
+    $c->render(json => { freebusy => $person->freebusy_filtered, slots => \@slots, start => $person->start });
 };
 
 my $search = sub {
@@ -206,15 +209,17 @@ my $search = sub {
 
     my $parse = sub {
 	my $dom = shift;
-
+	app->log->info($dom);
 	my $person = {};
 	
-	$person->{email}   = $dom->at('EmailAddress')->all_text;
-	$person->{name}    = $dom->at('GivenName')->all_text;
-	$person->{surname} = $dom->at('Surname')->all_text;
-	$person->{mobile}  = $dom->at('[Key="MobilePhone"]')->all_text || $dom->at('[Key="BusinessPhone"]')->all_text;
-	$person->{country} = $dom->at('CountryOrRegion')->all_text;
-	$person->{city}    = $dom->at('State')->all_text ? (join ', ', $dom->at('City')->all_text, $dom->at('State')->all_text) : $dom->at('City')->all_text;
+	$person->{email}    = $dom->at('EmailAddress')->all_text;
+	$person->{name}     = $dom->at('GivenName')->all_text;
+	$person->{surname}  = $dom->at('Surname')->all_text;
+	$person->{mobile}   = $dom->at('[Key="MobilePhone"]')->all_text || $dom->at('[Key="BusinessPhone"]')->all_text;
+	$person->{country}  = $dom->at('CountryOrRegion')->all_text;
+	$person->{city}     = $dom->at('State')->all_text ? (join ', ', $dom->at('City')->all_text, $dom->at('State')->all_text) : $dom->at('City')->all_text;
+	$person->{title}    = $dom->at('JobTitle')->all_text;
+	$person->{location} = $dom->at('OfficeLocation')->all_text;
 
 	return $person;
     };
@@ -285,6 +290,14 @@ any '/meeting/book' => sub {
     app->log->info($tx->res->message);
     $c->res->headers->content_type('text/xml');
     $c->render(text => $dom || 'all ok');
+};
+
+get '/timezones' => sub {
+    my $c = shift;
+    my @tz = DateTime::TimeZone->all_names;
+    if ($c->param('q')) { my $re = $c->param('q'); $re =~ s /\s/_/g; @tz = grep { /$re/i } @tz };
+    $c->render(json => \@tz);
+    
 };
 
 app->start;
