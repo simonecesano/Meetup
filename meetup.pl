@@ -7,35 +7,51 @@ use lib 'lib/perl5';
 use Mojo::JSON qw(decode_json encode_json);
 use DBI;
 
+plugin 'Persist' => { dbh => DBI->connect('dbi:SQLite:dbname=./jobs.db'), id => 'user' };
+plugin 'Localizer';
+
 hook (before_dispatch => sub {
 	  my $c = shift;
+	  # app->log->info(ref app->sessions);
+	  # app->sessions->secure(0);
 	  $c->session('user',     $ENV{EWS_USER})     unless $c->session('user');
 	  $c->session('password', $ENV{EWS_PASSWORD}) unless $c->session('password');
 	  app->log->info(defined $c->session('user'), defined $c->session('session')); 
 	  $c;
       });
 
-plugin 'Persist' => { dbh => DBI->connect('dbi:SQLite:dbname=./jobs.db'), id => 'user' };
-plugin 'Localizer';
+hook (before_render => sub {
+	  my $c = shift;
+	  app->log->info($c->session('user'));
+	  $c->cookie('me' => $c->session('user'));
+      });
 
 get '/' => sub {
     my $c = shift;
     $c->render(template => 'index');
 };
 
-
+get '/people' => [ format => ['json'] ] => sub {
+    my $c = shift;
+    my $people = $c->persist('people') || [];
+    $c->render(json => $people);
+};
 
 get '/people' => sub {
     my $c = shift;
 
-    my $people = $c->persist('people');
+    my $people = $c->persist('people') || [];
 
     $c->stash('people', $people);
-    app->log->info(dump $c->persist('people'));
-
     $c->persist('people', $people);
     $c->render(template => 'people');
 };
+
+# get '/nothing';
+
+# get '/handlebars';
+
+get '/i' => sub { shift->render('template', 'skunk/finch') };
 
 any '/people/#email/add' => sub {
     my $c = shift;
@@ -45,11 +61,7 @@ any '/people/#email/add' => sub {
     push @$people, $c->param('email');
 
     $people = [ uniq @$people ];
-
     $c->persist('people', $people);
-
-    app->log->info(dump $c->persist('people'));
-
     $people = $c->persist('people');
 
     $c->stash('people', $people);
@@ -62,12 +74,11 @@ any '/people/#email/delete' => sub {
     my $people = $c->persist('people');
 
     unless (grep { $_ eq $c->param('email') } @$people) {
-	$c->render(json => {message => 'not found' });
+	$c->render(json => { message => 'not found' });
     } else {
 	$people = [ grep { $_ ne $c->param('email') } @$people ];
-	app->log->info(dump $people);
 	$c->persist('people', $people);
-	$c->render(json => {message => 'done' });
+	$c->render(json => { message => 'done', people => $people });
     }
 };
 
@@ -146,6 +157,7 @@ get '/me/responses' => sub {
     my $c = shift;
     $c->render(template => 'responses');
 };
+
 
 app->start;
 
