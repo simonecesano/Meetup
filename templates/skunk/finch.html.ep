@@ -26,7 +26,7 @@
 
       Finch.route("/people", function(c) {
 	  app.setUpdater(function(){
-	      document.title = 'People';
+	      document.title = 'Your people';
 	      $('#navbar-title').html(document.title)
 
 	      console.log('people template loaded ' + (new Date()))
@@ -134,7 +134,7 @@
     <h3>{{ name }} {{ surname }}</h3>
     <div>{{ title }} </div>    
   </div>
-  <div>{{ city }} | {{ timeZoneId }}</div>
+    <div id="location">{{ city }} | {{ timeZoneId }} | <i class="fa fa-globe" aria-hidden="true"></i></div>
   <div>{{ mobile }} </div>
   <hr />
   <div id="actions">
@@ -147,13 +147,13 @@
 <script type="text/x-handlebars-template" id="slots-template">
   <div id="header">
     <h3>{{ name }} {{ surname }}</h3>
-    <div id="location">{{ city }} | {{ timeZoneId }} </div>
+    <div id="location">{{ city }} | {{ timeZoneId }} | <i class="fa fa-globe" aria-hidden="true"></i></div>
   </div>
   {{#each slots as |slot i| }}
   <div class="slot">
     <a href="#schedule/{{ ../email }}/{{ slot.[0] }}/{{ slot.[1] }}">
-    <div class="day">{{ moment-format slot.[0] 'ddd DD MMM' }}</div>
-    <div class="time">{{ moment-format slot.[0] 'HH:mm' }}-{{ moment-format slot.[1] 'HH:mm' }}</div>
+    <div class="day">{{ moment-format slot.[0] 'ddd DD MMM' 'Europe/Berlin' }}</div>
+    <div class="time">{{ moment-format slot.[0] 'HH:mm' 'Europe/Berlin' }}-{{ moment-format slot.[1] 'HH:mm' 'Europe/Berlin'}}</div>
     </a>
   </div>
   {{/each }}
@@ -169,7 +169,7 @@
 <script type="text/x-handlebars-template" id="schedule-template">
   <div id="header">
     <h3>{{ name }} {{ surname }}</h3>
-    <div id="location">{{ city }} | {{ timeZoneId }} </div>
+    <div id="location">{{ city }} | {{ timeZoneId }} | <i class="fa fa-globe" aria-hidden="true"></i></div>
     </div>
     <hr />
   <div id="schedule">
@@ -204,9 +204,8 @@
 <script type="text/x-handlebars-template" id="book-template">
   <div id="header">
     <h3>{{ name }} {{ surname }}</h3>
-    <div>{{ title }} </div>    
   </div>
-  <div>{{ city }} | {{ timeZoneId }}</div>
+  <div id="location">{{ city }} | {{ timeZoneId }} | <i class="fa fa-globe" aria-hidden="true"></i></div>
   <hr />
   <div id="data" style="margin-bottom:9px">
   </div>
