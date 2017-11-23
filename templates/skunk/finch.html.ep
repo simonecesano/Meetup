@@ -91,27 +91,6 @@
 	  app.clearUpdater()
       }).listen()
       
-      Finch.route("/setup/:email/:start/:end", function(c) {
-	  c = Object.assign(c, localStorage.getData('person/' + c.email ))
-	  var schedule = new Schedule(c.start, c.end);
-	  c.schedule = schedule;
-	  
-	  document.title = 'Schedule meeting';
-	  $('#navbar-title').html(document.title)
-	  $('#output').fromTemplate('book', c)
-	  $('#book').click(function(){
-	      $.post('/e/v1/meeting/book', {
-		  notes: $('#notes').val(),
-		  attendees: c.email,
-		  start: $('#meeting_start').data('time'),
-		  end: $('#meeting_end').data('time'),
-		  subject: $('#subject').val(),
-		  location: $('#location').val()
-	      }, function(d){
-		  console.log(d)
-	      })
-	  })
-      }).listen()
 
   })
 </script>
@@ -236,6 +215,32 @@
   <button id="book" class="btn btn-primary btn-lg" type="submit">book</button>&emsp;
   <button id="back" class="btn btn-info btn-lg" type="">back</button>
 </script>
+<script>
+  $(function(){
+      Finch.route("/setup/:email/:start/:end", function(c) {
+	  c = Object.assign(c, localStorage.getData('person/' + c.email ))
+	  var schedule = new Schedule(c.start, c.end);
+	  c.schedule = schedule;
+	  
+	  document.title = 'Schedule meeting';
+	  $('#navbar-title').html(document.title)
+	  $('#output').fromTemplate('book', c)
+	  $('#book').click(function(){
+	      $.post('/e/v1/meeting/book', {
+		  notes: $('#notes').val(),
+		  attendees: c.email,
+		  start: $('#meeting_start').data('time'),
+		  end: $('#meeting_end').data('time'),
+		  subject: $('#subject').val(),
+		  location: $('#location').val()
+	      }, function(d){
+		  console.log(d)
+	      })
+	  })
+      }).listen()
+  })
+</script>
+
 <style>
 .name, #add div { display: inline-block; width: 85%; margin-left: 6px }
     .person:first-child, .slot:first-child {
