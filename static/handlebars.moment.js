@@ -1,7 +1,19 @@
 Handlebars.registerHelper('moment-format', function() {
-    var date = arguments[0], format = arguments[1];
+    var date = arguments[0], format = arguments[1], timezone = arguments[2];
+
+    // XXX: this is not OK
     date = moment(date)
-    return date.format(format);
+
+    if (typeof timezone == 'string') {
+	// console.log("timezone is set")
+	// console.log(timezone)
+	// console.log(date.format())
+	// console.log(date.format(format))
+	// console.log(date.tz(timezone).format(format))
+	return date.tz(timezone).format(format);
+    } else {
+	return date.format(format);
+    }
 });
 
 Handlebars.registerHelper('moment-do', function() {
