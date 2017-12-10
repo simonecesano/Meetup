@@ -14,13 +14,25 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.10/handlebars.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.1/moment.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.13/moment-timezone-with-data.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@2/src/js.cookie.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/later/1.2.0/later.js"></script>
 
     <link href="https://fonts.googleapis.com/css?family=Lato" rel="stylesheet"> 
     <link href="https://fonts.googleapis.com/css?family=Cormorant+Garamond" rel="stylesheet" type="text/css" />
     <link href="https://fonts.googleapis.com/css?family=Proza+Libre" rel="stylesheet" type="text/css" />
     <style>body { margin-top: 70px; font-family: 'Lato', sans-serif; background-color: Gainsboro }</style>
+
     %end
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" media="screen" />
+    <script src="/static/storage.js"></script>
+    <script src="/static/freebusy.js"></script>
+    <script src="/static/handlebars.moment.js"></script>
+    <script src="/static/jquery.handlebars.js"></script>
+    <script src="/static/app.js"></script>
+
   </head>
+  
+  
   <body>
     <%= content %>
   </body>
