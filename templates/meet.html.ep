@@ -26,6 +26,11 @@
 	  <a href="<%= url_for('/meet') %>/<%= $email %>"></a>
 	</div>
       </div>
+      <div id="input">
+	<h4>timezone</h4>
+	<span>Europe/Berlin</span> | <span>America/Los Angeles</span> | <span>other...</span>
+      </div>
+      <hr />
       <div id="slots">
       </div>
       % if ($email eq session('email')) {
@@ -45,6 +50,9 @@
 	
 	var d =  Object.assign(localStorage.getData('tz/' + email),
 			       localStorage.getData('data/' + email));
+
+	console.log(localStorage.getData('tz/' + email, 'data/' + email));
+	
 	$('#data').html(templates.data(d));
 
 	localStorage.setDataFromURL(
@@ -52,7 +60,8 @@
 	    'freebusy/' + email,
 	    function(d){
 		var f = new FreeBusy(d.start, d.freebusy, 30)
-		var slots = _.map(d.slots, function(e, i){ return { start: moment(e[0]).tz('UTC'), end: moment(e[1]).tz('UTC') } });
+		var slots = _.map(d.slots, function(e, i){ return {
+		    start: moment(e[0] + 'Z').tz('Europe/Berlin'), end: moment(e[1] + 'Z').tz('Europe/Berlin') } });
 		$('#slots').fromTemplate('slots', { slots: slots });
 	    }
 	);
@@ -69,14 +78,14 @@
 {{#each slots}}    
 <div class="slot">
   <a href="<%= url_for('/setup/') %><%= $email %>/{{ moment-format start ''}}/{{ moment-format end '' }}">
-    <span class="time">{{ moment-format start 'ddd HH:mm' }}</span>-<span class="time">{{ moment-format end 'ddd HH:mm' }}</span>
+    <span class="time">{{ moment-format start 'ddd DD MMM HH:mm' }}</span>-<span class="time">{{ moment-format end 'HH:mm' }}</span>
   </a>
 </div>
 {{/each}}    
 </script>
 <script id="data-template" type="text/x-handlebars-template">
   <div id="email" data-email="<%= $email %>">
-    <a href="<%= url_for('/meet') %>/<%= $email %>"><h2>{{ name }}</h2></a>
+    <a href="<%= url_for('/meet') %>/<%= $email %>"><h2>{{ name }} {{ surname }}</h2></a>
   </div>
   <span id="city">{{ city }}</span> |
   <span id="country">{{ country }}</span> |
