@@ -1,0 +1,26 @@
+$(function(){
+    var app = new Meetup;
+    
+    later.setInterval(function(){
+	app.setLocation();
+	
+	var email = Cookies.get('me');
+	var people = [ email ];
+	
+	$.get('/m/v1/people.json', function(d){
+	    people = people.concat(d);
+	    localStorage.setData('people/', d)
+	}).then(function(){
+	})
+    }, later.parse.recur().every(60).second().startingOn(20))
+    
+    later.setInterval(function(){
+	var people = localStorage.getData('people/')
+	app.updateSchedules(people).then(function(){ })
+    }, later.parse.recur().every(5).minute().startingOn(2));
+    
+    later.setInterval(function(){
+	var people = localStorage.getData('people/')
+	app.updatePeople(people).then(function(){ })
+    }, later.parse.recur().every(12).minute().startingOn(3));
+})

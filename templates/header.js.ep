@@ -1,0 +1,22 @@
+// this is a header
+$(function(){
+    var app = new Meetup;
+% if (session('email')) {
+    var email = Cookies.get('me');
+    var people = [ email ];
+
+    app.setLocation();
+
+    $.get('/m/v1/people.json', function(d){
+	people = people.concat(d);
+	localStorage.setData('people/', d)
+    }).then(function(){
+	Promise.all([ app.updatePeople(people), app.updateSchedules(people) ])
+	    .then(function(d){
+		console.log('done with everything');
+	    })
+    }).then(function(){
+	console.log('done getting people');
+    });
+% }
+})
