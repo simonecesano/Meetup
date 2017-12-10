@@ -2,13 +2,13 @@
   <nav class="navbar navbar-inverse navbar-fixed-top">
     <div class="container-fluid">
       <div class="navbar-header">
+	<a class="navbar-brand" href="/"><i class="fa fa-calendar fa-lg" aria-hidden="true"></i></a>
 	<div id="navbar-title" class="navbar-text" style="display:inline-block;font-weight:bold;font-size:14pt;color:white"><%= $title %></div>
 	<button class="collapsed navbar-toggle" data-target="#bs-example-navbar-collapse-2" data-toggle="collapse" type="button">
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
           <span class="icon-bar"></span>
 	</button>
-	<a class="navbar-brand" href="/"><i class="fa fa-calendar fa-lg" aria-hidden="true"></i></a>
       </div>
       <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-2">
 	<ul class="nav navbar-nav">
@@ -17,7 +17,7 @@
 	       aria-haspopup="true" aria-expanded="false">People <span class="caret"></span></a>
             <ul class="dropdown-menu">
 	      <li ><a href="#people" >Meet</a></li>
-	      <li ><a href="<%= url_for('/search') %>" >Search</a></li>
+	      <li ><a href="#search" >Search</a></li>
 	    </ul>
 	  </li>
 	  <li class="dropdown">
@@ -36,3 +36,13 @@
     </div>
   </nav>
 </div>
+<script>
+    $(function(){
+	$('.dropdown-menu a').click(function(){
+	  console.log('foobar');
+	  // $('.dropdown.open .dropdown-toggle').dropdown('toggle');
+	  // $('[data-toggle="dropdown"]').parent().removeClass('open');
+	  $(".navbar-collapse").toggleClass('in')
+	})
+  })
+</script>
