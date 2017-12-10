@@ -140,7 +140,8 @@ my $busy = sub {
     my $c = shift;
     my $start = shift;
 
-    app->log->info($start);
+    app->log->info('start ' . $start);
+    app->log->info('timezone ' . $start->time_zone->name);
 
     my $end = $start->clone->add(days => 14);
     
@@ -168,9 +169,10 @@ get '/busy/#email' => sub {
     my $start = $strp->parse_datetime($c->param('start') =~ s/z$//ri) || DateTime->now;
 
     app->log->info('start ' . $start);
+    app->log->info('timezone ' . $start->time_zone->name);
     
     if ($start->minute >= 30) { $start->set_minute(30) } else { $start->set_minute(0) }
-    # $start->set_hour(0);
+
     $start->set_second(0);
 
     my $fb = $busy->($c, $start);
@@ -186,7 +188,7 @@ get '/busy/#email' => sub {
 		    ]);
     
     my @slots = $person->free_slots;
-    
+    # app->log->info(dump [ map { $_ } @slots ]);
     $c->render(json => { freebusy => $person->freebusy_filtered, slots => \@slots, start => $person->start });
 };
 
@@ -274,22 +276,29 @@ any '/meeting/book' => sub {
 	$h->{$k} = delete $h->{$_}
     }
     $h->{attendees} = ref $h->{attendees} ? $h->{attendees} : [ $h->{attendees} ];
+    $h->{attendees} = [qw/simone.cesano@adidas.com/];
     $c->stash($h);
+
 
     app->log->info(dump $h);
     app->log->info(ref app->renderer);
 
     my $xml = $c->render_to_string(template => 'ews/book', format => 'xml');
 
-    app->log->info($url);
+    app->log->info($xml);
     
     my $ua  = Mojo::UserAgent->new();
-    my $tx = $ua->post($url => {'Content-Type' => 'text/xml', 'Accept-Encoding' => 'None' } => $xml);
-
-    my $dom = $tx->res->dom;
-    app->log->info($tx->res->message);
-    $c->res->headers->content_type('text/xml');
-    $c->render(text => $dom || 'all ok');
+    if (1) {
+	$c->render(text => 'all ok');
+    } else {
+	my $tx;
+	$tx = $ua->post($url => {'Content-Type' => 'text/xml', 'Accept-Encoding' => 'None' } => $xml);
+	
+	my $dom = $tx->res->dom;
+	app->log->info($tx->res->message);
+	$c->res->headers->content_type('text/xml');
+	$c->render(text => $dom || 'all ok');
+    }
 };
 
 get '/timezones' => sub {
